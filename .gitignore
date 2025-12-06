@@ -1,0 +1,25 @@
+# Maven build outputs
+**/target/
+
+# Build tools
+.mvn/timing.properties
+
+# IDE settings
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# Logs and misc
+*.log
+hs_err_pid*
+replay_pid*
+
+# OS files
+.DS_Store
+Thumbs.db
