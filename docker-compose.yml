@@ -1,4 +1,17 @@
 services:
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5435:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+
   word-db:
     image: postgres:16-alpine
     environment:
@@ -6,10 +19,11 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432" # Porta padrão para o Word-Service
+      - "5432:5432"
     volumes:
       - word_db_data:/var/lib/postgresql/data
-    restart: unless-stopped
+    networks:
+      - microservices-network
 
   tag-db:
     image: postgres:16-alpine
@@ -18,10 +32,11 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
-      - "5433:5432" # Porta para o Tag-Service
+      - "5433:5432"
     volumes:
       - tag_db_data:/var/lib/postgresql/data
-    restart: unless-stopped
+    networks:
+      - microservices-network
 
   relationship-db:
     image: postgres:16-alpine
@@ -30,22 +45,11 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
-      - "5434:5432" # Porta para o Relationship-Service
+      - "5434:5432"
     volumes:
       - relationship_db_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-  auth-db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: auth_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5435:5432" # Porta para o Auth-Service
-    volumes:
-      - auth_db_data:/var/lib/postgresql/data
-    restart: unless-stopped
+    networks:
+      - microservices-network
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
@@ -54,12 +58,106 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "5672:5672" # Porta padrão AMQP
-      - "15672:15672" # Porta para o painel de gerenciamento
-    restart: unless-stopped
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - microservices-network
+
+  auth-service:
+    build:
+      context: ./authservice
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      SERVER_PORT: 4000
+    ports:
+      - "4000:4000"
+    depends_on:
+      - auth-db
+    networks:
+      - microservices-network
+
+  word-service:
+    build:
+      context: ./wordservice
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://word-db:5432/word_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      SERVER_PORT: 4001
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      AUTH_SERVICE_URL: http://auth-service:4000
+      RELATIONSHIP_SERVICE_URL: http://relationship-service:4003
+    ports:
+      - "4001:4001"
+    depends_on:
+      - word-db
+      - rabbitmq
+      - auth-service
+    networks:
+      - microservices-network
+
+  tag-service:
+    build:
+      context: ./labelservice
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://tag-db:5432/tag_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      SERVER_PORT: 4002
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      AUTH_SERVICE_URL: http://auth-service:4000
+      RELATIONSHIP_SERVICE_URL: http://relationship-service:4003
+    ports:
+      - "4002:4002"
+    depends_on:
+      - tag-db
+      - rabbitmq
+      - auth-service
+    networks:
+      - microservices-network
+
+  relationship-service:
+    build:
+      context: ./relationshipservice
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://relationship-db:5432/relationship_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      SERVER_PORT: 4003
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      AUTH_SERVICE_URL: http://auth-service:4000
+      WORD_SERVICE_URL: http://word-service:4001
+      TAG_SERVICE_URL: http://tag-service:4002
+    ports:
+      - "4003:4003"
+    depends_on:
+      - relationship-db
+      - rabbitmq
+      - auth-service
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
 
 volumes:
+  auth_db_data:
   word_db_data:
   tag_db_data:
   relationship_db_data:
-  auth_db_data:
