@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/relacionamentos")
@@ -53,7 +52,7 @@ public class RelacionamentoController {
         List<Long> etiquetas = relacionamentoRepository.findByIdPalavra(idPalavra)
                 .stream()
                 .map(Relacionamento::getIdEtiqueta)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(etiquetas);
     }
 
@@ -66,7 +65,7 @@ public class RelacionamentoController {
         List<Long> palavras = relacionamentoRepository.findByIdEtiqueta(idEtiqueta)
                 .stream()
                 .map(Relacionamento::getIdPalavra)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(palavras);
     }
 

@@ -24,6 +24,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        // Note: Plain text password comparison is used for simplicity in this skeleton demo.
+        // In production, use proper password hashing (bcrypt, Argon2, etc.)
         return userRepository.findByEmail(request.getEmail())
                 .filter(user -> user.getPassword().equals(request.getPassword()))
                 .map(user -> {
